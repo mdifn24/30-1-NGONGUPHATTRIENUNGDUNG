@@ -42,7 +42,7 @@
       "id": "8",
       "title": "Duy Hành hôi lách",
       "views": "5000",
-      "isDeleted": false
+      "isDeleted": true
     }
   ],
   "comments": [
@@ -64,7 +64,7 @@
     },
     {
       "id": "4",
-      "text": "hành duy hôi lách ",
+      "text": "hành duy hôi lách ghê",
       "postId": "8",
       "isDeleted": false
     }

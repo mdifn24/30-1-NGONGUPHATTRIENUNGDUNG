@@ -1,261 +1,117 @@
-const API_URL = 'http://localhost:3000';
+const productsData = [
+  // 5 Sản phẩm cũ của bạn
+  { "id": 6, "title": "Classic Comfort Fit Joggers", "price": 25, "description": "Perfect blend of style and comfort with soft elastic waistband.", "images": ["https://i.imgur.com/ZKGofuB.jpeg"] },
+  { "id": 14, "title": "Classic High-Waisted Athletic Shorts", "price": 43, "description": "Designed for optimal movement and versatility for workout.", "images": ["https://i.imgur.com/eGOUveI.jpeg"] },
+  { "id": 15, "title": "Classic White Crew Neck T-Shirt", "price": 39, "description": "Versatile white crew neck tee made from soft cotton blend.", "images": ["https://i.imgur.com/axsyGpD.jpeg"] },
+  { "id": 16, "title": "Classic White Tee - Timeless Style", "price": 73, "description": "Premium soft cotton material, perfect for daily wear.", "images": ["https://i.imgur.com/Y54Bt8J.jpeg"] },
+  { "id": 17, "title": "Classic Black T-Shirt", "price": 35, "description": "Staple piece crafted from breathable cotton for all-day comfort.", "images": ["https://i.imgur.com/9DqEOV5.jpeg"] },
+  
+  // 5 Sản phẩm mới thêm (Ảnh cực kỳ ổn định)
+  {
+    "id": 101,
+    "title": "Modern Leather Watch",
+    "price": 120,
+    "description": "A sophisticated timepiece with a genuine leather strap and minimalist dial.",
+    "images": ["https://images.unsplash.com/photo-1524592093035-238b9d759537?auto=format&fit=crop&w=200&q=80"]
+  },
+  {
+    "id": 102,
+    "title": "Wireless Noise-Cancelling Headphones",
+    "price": 299,
+    "description": "Experience immersive sound with our latest active noise-cancelling technology.",
+    "images": ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80"]
+  },
+  {
+    "id": 103,
+    "title": "Minimalist Ceramic Coffee Mug",
+    "price": 15,
+    "description": "Handcrafted ceramic mug with a matte finish, perfect for your morning brew.",
+    "images": ["https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=200&q=80"]
+  },
+  {
+    "id": 104,
+    "title": "Ergonomic Mechanical Keyboard",
+    "price": 85,
+    "description": "Tactile switches and customizable RGB lighting for the ultimate typing experience.",
+    "images": ["https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=200&q=80"]
+  },
+  {
+    "id": 105,
+    "title": "Sustainable Bamboo Sunglasses",
+    "price": 45,
+    "description": "Eco-friendly sunglasses with polarized lenses and lightweight bamboo frames.",
+    "images": ["https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=200&q=80"]
+  }
+];
 
-// Khởi chạy khi trang load xong
-window.onload = () => {
-    LoadData();
-};
+let filteredProducts = [...productsData];
+let currentPage = 1;
+let itemsPerPage = 5;
 
-async function LoadData() {
-    await LoadPosts();
-    await LoadComments();
-}
+window.onload = () => { renderTable(); };
 
-// --- HELPER FUNCTION: AUTO ID (MAX ID + 1) ---
-// Hàm này dùng chung cho cả Posts và Comments
-async function getNextId(resource) {
-    try {
-        let res = await fetch(`${API_URL}/${resource}`);
-        let items = await res.json();
-        
-        let maxId = 0;
-        items.forEach(item => {
-            // Chuyển ID sang số nguyên để so sánh toán học
-            let currentId = parseInt(item.id);
-            if (!isNaN(currentId) && currentId > maxId) {
-                maxId = currentId;
-            }
-        });
-        // Trả về chuỗi (String) theo yêu cầu của json-server
-        return (maxId + 1).toString();
-    } catch (error) {
-        console.error("Error calculating ID:", error);
-        return "1"; // Giá trị mặc định nếu lỗi
-    }
-}
+function renderTable() {
+    const body = document.getElementById('product-body');
+    if (!body) return;
+    body.innerHTML = "";
 
-// ==========================================
-//              POSTS LOGIC
-// ==========================================
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginatedItems = filteredProducts.slice(start, end);
 
-async function LoadPosts() {
-    try {
-        let res = await fetch(`${API_URL}/posts`);
-        let posts = await res.json();
-        let body = document.getElementById('post-body');
-        body.innerHTML = "";
-        
-        for (const post of posts) {
-            body.innerHTML += convertPostToHTML(post);
-        }
-    } catch (error) { console.error(error); }
-}
+    paginatedItems.forEach((prod) => {
+        // CƠ CHẾ DỰ PHÒNG: Nếu ảnh chính lỗi, dùng ảnh từ Picsum (rất ổn định)
+        const fallbackImg = `https://picsum.photos/seed/${prod.id}/200`;
+        const displayImg = (prod.images && prod.images[0]) ? prod.images[0] : fallbackImg;
 
-function convertPostToHTML(post) {
-    // Kiểm tra cờ xoá mềm
-    const isDeleted = post.isDeleted === true;
-    
-    // Nếu đã xoá: Thêm class gạch ngang, Disable nút bấm
-    const rowClass = isDeleted ? 'deleted-row' : '';
-    const btnState = isDeleted ? 'disabled' : ''; 
-    
-    return `<tr class="${rowClass}">
-        <td>${post.id}</td>
-        <td>${post.title}</td>
-        <td>${post.views}</td>
-        <td>
-            <button class="btn-edit" onclick="EditPost('${post.id}', '${post.title}', '${post.views}')" ${btnState}>Edit</button>
-            <button class="btn-delete" onclick="SoftDeletePost('${post.id}')" ${btnState}>Delete</button>
-        </td>
-    </tr>`;
-}
-
-// 1. Hàm chuẩn bị form để Sửa (Update Mode)
-function EditPost(id, title, views) {
-    // Đổ dữ liệu cũ vào input
-    document.getElementById("post_id_txt").value = id; // ID vào ô ẩn
-    document.getElementById("post_title_txt").value = title;
-    document.getElementById("post_views_txt").value = views;
-
-    // Đổi giao diện nút bấm
-    let saveBtn = document.getElementById("post_save_btn");
-    saveBtn.innerText = "Update Post";
-    saveBtn.style.backgroundColor = "#2196F3"; // Màu xanh dương báo hiệu Update
-
-    // Hiện nút Cancel
-    document.getElementById("post_cancel_btn").classList.remove("hidden");
-}
-
-// 2. Hàm Reset form về chế độ Thêm mới (Create Mode)
-function ResetPostForm() {
-    document.getElementById("post_id_txt").value = ""; // Xoá ID ẩn
-    document.getElementById("post_title_txt").value = "";
-    document.getElementById("post_views_txt").value = "";
-
-    // Trả lại giao diện nút bấm
-    let saveBtn = document.getElementById("post_save_btn");
-    saveBtn.innerText = "Add Post";
-    saveBtn.style.backgroundColor = ""; // Về màu mặc định (xanh lá)
-
-    // Ẩn nút Cancel
-    document.getElementById("post_cancel_btn").classList.add("hidden");
-}
-
-// 3. Hàm Lưu chính (Xử lý cả Thêm mới và Cập nhật)
-async function SavePost() {
-    let id = document.getElementById("post_id_txt").value; // Lấy ID từ ô ẩn
-    let title = document.getElementById("post_title_txt").value;
-    let views = document.getElementById('post_views_txt').value;
-
-    // Validate cơ bản
-    if (!title) { alert("Please enter title!"); return; }
-
-    if (!id) {
-        // === TRƯỜNG HỢP: TẠO MỚI (CREATE) ===
-        // ID rỗng -> Tự sinh ID mới
-        let newId = await getNextId('posts');
-        await fetch(`${API_URL}/posts`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                id: newId, 
-                title: title, 
-                views: views, 
-                isDeleted: false // Mặc định chưa xoá
-            })
-        });
-    } else {
-        // === TRƯỜNG HỢP: CẬP NHẬT (UPDATE) ===
-        // ID có giá trị -> Dùng PATCH để sửa
-        await fetch(`${API_URL}/posts/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                title: title, 
-                views: views 
-            })
-        });
-    }
-    
-    ResetPostForm(); // Reset form sau khi lưu
-    LoadPosts();     // Load lại bảng
-}
-
-// 4. Hàm Xoá Mềm
-async function SoftDeletePost(id) {
-    if(!confirm("Are you sure you want to delete this post?")) return;
-    
-    await fetch(`${API_URL}/posts/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isDeleted: true }) // Đánh dấu đã xoá
+        body.innerHTML += `
+            <tr>
+                <td>${prod.id}</td>
+                <td>
+                    <img src="${displayImg}" 
+                         class="prod-img" 
+                         onerror="this.onerror=null;this.src='${fallbackImg}';" 
+                         alt="product">
+                </td>
+                <td>${prod.title}</td>
+                <td><strong>${prod.price}</strong></td>
+                <td>${prod.description.substring(0, 80)}...</td>
+            </tr>
+        `;
     });
-    
-    LoadPosts();
+
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+    document.getElementById('pageInfo').innerText = `Trang ${currentPage} / ${totalPages}`;
 }
 
-
-// ==========================================
-//              COMMENTS LOGIC
-// ==========================================
-// (Logic tương tự hoàn toàn với Posts)
-
-async function LoadComments() {
-    try {
-        let res = await fetch(`${API_URL}/comments`);
-        let comments = await res.json();
-        let body = document.getElementById('comment-body');
-        body.innerHTML = "";
-        
-        for (const cmt of comments) {
-            body.innerHTML += convertCommentToHTML(cmt);
-        }
-    } catch (error) { console.error(error); }
+// Giữ nguyên các hàm handleSearch, handleSort, handlePageSizeChange, changePage như cũ
+function handleSearch() {
+    const keyword = document.getElementById('searchTitle').value.toLowerCase();
+    filteredProducts = productsData.filter(p => p.title.toLowerCase().includes(keyword));
+    currentPage = 1;
+    renderTable();
 }
 
-function convertCommentToHTML(cmt) {
-    const isDeleted = cmt.isDeleted === true;
-    const rowClass = isDeleted ? 'deleted-row' : '';
-    const btnState = isDeleted ? 'disabled' : '';
-
-    return `<tr class="${rowClass}">
-        <td>${cmt.id}</td>
-        <td>${cmt.text}</td>
-        <td>${cmt.postId}</td>
-        <td>
-            <button class="btn-edit" onclick="EditComment('${cmt.id}', '${cmt.text}', '${cmt.postId}')" ${btnState}>Edit</button>
-            <button class="btn-delete" onclick="SoftDeleteComment('${cmt.id}')" ${btnState}>Delete</button>
-        </td>
-    </tr>`;
+function handleSort() {
+    const option = document.getElementById('sortOption').value;
+    if (option === 'price-asc') filteredProducts.sort((a, b) => a.price - b.price);
+    else if (option === 'price-desc') filteredProducts.sort((a, b) => b.price - a.price);
+    else if (option === 'name-asc') filteredProducts.sort((a, b) => a.title.localeCompare(b.title));
+    else if (option === 'name-desc') filteredProducts.sort((a, b) => b.title.localeCompare(a.title));
+    renderTable();
 }
 
-function EditComment(id, text, postId) {
-    document.getElementById("cmt_id_txt").value = id;
-    document.getElementById("cmt_text_txt").value = text;
-    document.getElementById("cmt_postid_txt").value = postId;
-
-    let saveBtn = document.getElementById("cmt_save_btn");
-    saveBtn.innerText = "Update Comment";
-    saveBtn.style.backgroundColor = "#2196F3";
-
-    document.getElementById("cmt_cancel_btn").classList.remove("hidden");
+function handlePageSizeChange() {
+    itemsPerPage = parseInt(document.getElementById('pageSize').value);
+    currentPage = 1;
+    renderTable();
 }
 
-function ResetCommentForm() {
-    document.getElementById("cmt_id_txt").value = "";
-    document.getElementById("cmt_text_txt").value = "";
-    document.getElementById("cmt_postid_txt").value = "";
-
-    let saveBtn = document.getElementById("cmt_save_btn");
-    saveBtn.innerText = "Add Comment";
-    saveBtn.style.backgroundColor = "";
-
-    document.getElementById("cmt_cancel_btn").classList.add("hidden");
-}
-
-async function SaveComment() {
-    let id = document.getElementById("cmt_id_txt").value;
-    let text = document.getElementById("cmt_text_txt").value;
-    let postId = document.getElementById("cmt_postid_txt").value;
-
-    if (!text) { alert("Please enter comment text!"); return; }
-
-    if (!id) {
-        // Create
-        let newId = await getNextId('comments');
-        await fetch(`${API_URL}/comments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                id: newId, 
-                text: text, 
-                postId: postId, 
-                isDeleted: false 
-            })
-        });
-    } else {
-        // Update
-        await fetch(`${API_URL}/comments/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                text: text, 
-                postId: postId 
-            })
-        });
+function changePage(step) {
+    const maxPage = Math.ceil(filteredProducts.length / itemsPerPage);
+    const newPage = currentPage + step;
+    if (newPage >= 1 && newPage <= maxPage) {
+        currentPage = newPage;
+        renderTable();
     }
-    
-    ResetCommentForm();
-    LoadComments();
-}
-
-async function SoftDeleteComment(id) {
-    if(!confirm("Delete this comment?")) return;
-    
-    await fetch(`${API_URL}/comments/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isDeleted: true })
-    });
-    
-    LoadComments();
 }
